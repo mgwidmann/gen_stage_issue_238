@@ -12,24 +12,24 @@ defmodule GenStageIssue238.Worker do
         default: [
           module: {BroadwaySQS.Producer,
             queue_name: Application.get_env(:gen_stage_issue_238, :queue_name),
-            max_number_of_messages: 1,
+            max_number_of_messages: 10,
             wait_time_seconds: 10,
             visibility_timeout: 150,
             receive_interval: 0
           },
-          stages: 8
+          stages: 1
         ]
       ],
       processors: [
         default: [
-          stages: 8
+          stages: System.schedulers_online() * 10
         ]
       ],
       batchers: [
         default: [
           batch_size: 10,
-          batch_timeout: 2000,
-          stages: 4
+          batch_timeout: 5000,
+          stages: 1
         ]
       ]
     )
