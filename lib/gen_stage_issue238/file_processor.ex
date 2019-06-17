@@ -8,7 +8,7 @@ defmodule GenStageIssue238.FileProcessor do
     |> Flow.reduce(fn -> 0 end, fn _, acc ->
       acc + 1
     end)
-    |> Enum.to_list()
+    |> Flow.run
   end
 
   def file_processing_stream(bucket, path) do
@@ -16,20 +16,23 @@ defmodule GenStageIssue238.FileProcessor do
     |> ExAws.S3.download_file(path, :memory, chunk_size: @chunk_size, max_concurrency: 25)
     |> ExAws.stream!()
     |> StreamGzip.gunzip()
-    |> Stream.concat([:end])
-    # Transform it into lines since it is currently in @chunk_size
-    |> Stream.transform("",fn
-      :end, prev ->
-        {[prev],""}
-      chunk, prev ->
-        [last_line | lines] =
-          String.split(prev <> chunk, "\n")
-          |> Enum.reverse()
-        {Enum.reverse(lines), last_line}
-    end)
+    # |> Stream.concat([:end])
+    # # Transform it into lines since it is currently in @chunk_size
+    # |> Stream.transform("",fn
+    #   :end, prev ->
+    #     {[prev],""}
+    #   chunk, prev ->
+    #     [last_line | lines] =
+    #       String.split(prev <> chunk, "\n")
+    #       |> Enum.reverse()
+    #     {Enum.reverse(lines), last_line}
+    # end)
     |> Flow.from_enumerable()
-    |> Flow.map(fn line ->
-      String.split(line, " ")
+    |> Flow.map(fn
+      :end ->
+        []
+      line when is_binary(line) ->
+        String.split(line, " ")
     end)
     |> Flow.partition()
     |> Flow.map(fn
